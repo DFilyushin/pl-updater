@@ -1,11 +1,9 @@
 .venv/
+.env
+config.yaml
+analytics.db
 __pycache__/
 *.pyc
-build/
-dist/
-*.spec
-settings.json
-data.sqlite3
-cookies.dat
-app.log
-debug/
+.idea/
+*.csv
+*.xlsx
