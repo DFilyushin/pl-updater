@@ -17,6 +17,7 @@ PAGE_SIZE = 50
 
 
 def _dump_debug(name: str, html: str) -> None:
+    """Сохраняет HTML в debug/ — чтобы разобраться, если вёрстка сайта изменилась."""
     debug_dir = base_dir() / "debug"
     debug_dir.mkdir(exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -29,6 +30,7 @@ def _dump_debug(name: str, html: str) -> None:
 
 
 def _topic_id_from_href(href: str) -> int | None:
+    """Достаёт id темы из ссылки вида viewtopic.php?t=123."""
     qs = parse_qs(urlparse(href).query)
     try:
         return int(qs["t"][0])
@@ -37,6 +39,7 @@ def _topic_id_from_href(href: str) -> int | None:
 
 
 def _parse_row(row) -> dict | None:
+    """Разбирает строку таблицы результатов в dict темы; None — не строка с темой."""
     # В ячейках трекера есть скрытые <u>-теги со значениями для сортировки
     # (unix-время, байты, сиды): берём из них timestamp, остальные удаляем,
     # иначе они склеиваются с видимым текстом («3636» вместо «36»).
@@ -98,6 +101,11 @@ def _parse_row(row) -> dict | None:
 
 
 def parse_results(html: str) -> list[dict]:
+    """Список тем со страницы tracker.php (без дублей, в порядке сайта).
+
+    Ищет таблицу #tor-tbl, при её отсутствии — любые строки со ссылкой на тему,
+    чтобы пережить небольшие изменения вёрстки.
+    """
     soup = BeautifulSoup(html, "lxml")
     rows = soup.select("table#tor-tbl tr") or soup.select("tr.tCenter")
     if not rows:
@@ -166,6 +174,7 @@ _FNAME_RE = re.compile(r"filename\*?=(?:UTF-8''|\"?)([^\";]+)", re.IGNORECASE)
 
 
 def _filename_from_headers(resp, topic_id: int) -> str:
+    """Безопасное имя .torrent-файла из Content-Disposition (cp1251), иначе <id>.torrent."""
     cd = resp.headers.get("Content-Disposition", "")
     m = _FNAME_RE.search(cd)
     name = ""
@@ -184,6 +193,11 @@ def _filename_from_headers(resp, topic_id: int) -> str:
 
 
 def download_torrent(session: PlSession, topic_id: int, dest_dir: str | Path) -> Path:
+    """Скачивает .torrent темы через авторизованную сессию в dest_dir, возвращает путь.
+
+    Ответ проверяется по сигнатуре bencode: если вместо торрента пришла страница
+    входа — NotAuthorized (вызывающий перелогинится), иначе — DownloadError.
+    """
     resp = session.get(f"dl.php?t={topic_id}")
     content = resp.content
     if not content.startswith(b"d") or b"announce" not in content[:256]:

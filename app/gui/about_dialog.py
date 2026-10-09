@@ -8,6 +8,7 @@ from .utils import center_on_parent
 
 
 def show_about(parent: tk.Misc) -> None:
+    """Модальное окно с иконкой, названием и версией; возвращает управление после закрытия."""
     dlg = tk.Toplevel(parent)
     dlg.withdraw()
     dlg.title("О программе")

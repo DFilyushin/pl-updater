@@ -8,6 +8,7 @@ from app.storage import Storage
 
 
 def setup_logging() -> None:
+    """Пишет журнал в app.log рядом с exe (консоли у windowed-сборки нет)."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -16,6 +17,7 @@ def setup_logging() -> None:
 
 
 def main() -> int:
+    """Загружает настройки и базу, запускает главное окно; база закрывается при выходе."""
     setup_logging()
     logging.info("Запуск приложения")
     config = Config()

@@ -3,6 +3,7 @@ import tkinter as tk
 
 
 def center_on_screen(win: tk.Tk, width: int, height: int) -> None:
+    """Задаёт размер окна и ставит его по центру экрана."""
     x = max(0, (win.winfo_screenwidth() - width) // 2)
     y = max(0, (win.winfo_screenheight() - height) // 2)
     win.geometry(f"{width}x{height}+{x}+{y}")

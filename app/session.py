@@ -36,10 +36,12 @@ class NotAuthorized(Exception):
 
 
 def decode(resp: requests.Response) -> str:
+    """Тело ответа как текст: сайт отдаёт windows-1251 без надёжного charset."""
     return resp.content.decode(ENCODING, errors="replace")
 
 
 def _has_login_form(html: str) -> bool:
+    """Признак «не авторизован»: на странице есть поле пароля формы входа."""
     return 'name="login_password"' in html or "name='login_password'" in html
 
 
@@ -66,6 +68,8 @@ def _find_captcha(soup: BeautifulSoup) -> dict | None:
 
 
 class PlSession:
+    """HTTP-сессия с сайтом: requests.Session + cookies в cookies.dat + вход по логину."""
+
     def __init__(self, config: Config, cookies_path: Path | None = None):
         self.config = config
         self.cookies_path = cookies_path or (base_dir() / "cookies.dat")
@@ -94,6 +98,7 @@ class PlSession:
     # --- HTTP ---
 
     def get(self, path: str, **kwargs) -> requests.Response:
+        """GET относительно BASE_URL; HTTP-ошибки 4xx/5xx — исключение."""
         resp = self.http.get(urljoin(BASE_URL, path), timeout=30, **kwargs)
         resp.raise_for_status()
         return resp
@@ -113,6 +118,7 @@ class PlSession:
     # --- авторизация ---
 
     def is_alive(self) -> bool:
+        """Сессия жива, если tracker.php открывается без формы входа."""
         try:
             html = decode(self.get("tracker.php"))
         except requests.RequestException:
@@ -120,11 +126,18 @@ class PlSession:
         return not _has_login_form(html)
 
     def ensure_login(self, captcha_solver=None) -> None:
+        """Входит на сайт, только если сохранённые cookies уже не действуют."""
         if self.is_alive():
             return
         self.login(captcha_solver)
 
     def login(self, captcha_solver=None) -> None:
+        """Вход по логину/паролю из настроек.
+
+        Если сайт ответил капчей — показываем её через captcha_solver и делаем
+        одну повторную попытку (больше не пробуем, чтобы не спровоцировать бан).
+        Ошибки — LoginError / CaptchaCancelled; при успехе cookies сохраняются.
+        """
         if not self.config.login or not self.config.password:
             raise LoginError("Не заданы логин и пароль (Настройки).")
         data = {

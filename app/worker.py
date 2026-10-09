@@ -23,6 +23,9 @@ CAPTCHA_WAIT_SECONDS = 600
 
 
 class CheckWorker(threading.Thread):
+    """Один прогон проверки: вход на сайт, поиск по всем активным запросам,
+    сохранение новых тем. Результат сообщается событиями в очередь events."""
+
     def __init__(self, session: PlSession, store: Storage, config: Config,
                  events: "queue.Queue"):
         super().__init__(daemon=True, name="check-worker")
@@ -41,6 +44,7 @@ class CheckWorker(threading.Thread):
         return reply.get("code")
 
     def run(self) -> None:
+        """Точка входа потока: любые ошибки превращаются в событие ("error", текст)."""
         try:
             self._check_all()
         except CaptchaCancelled:
@@ -52,6 +56,8 @@ class CheckWorker(threading.Thread):
             self.events.put(("error", f"Ошибка: {e}"))
 
     def _check_all(self) -> None:
+        """Обходит активные запросы с паузой между ними; ошибка одного запроса
+        не прерывает остальные."""
         queries = self.store.list_queries(enabled_only=True)
         if not queries:
             self.events.put(("error", "Нет активных запросов — добавьте их в настройках."))
@@ -86,6 +92,7 @@ class CheckWorker(threading.Thread):
         self.events.put(("status", f"Готово. Новых тем: {total_new}{msg_extra}"))
 
     def _search_with_relogin(self, text: str, pages: int, delay: float) -> list[dict]:
+        """Поиск; если сессия истекла посреди проверки — один повторный вход и повтор."""
         try:
             return search_mod.search(self.session, text, pages, delay)
         except NotAuthorized:

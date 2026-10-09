@@ -30,6 +30,9 @@ COLUMNS = (
 
 
 class MainWindow(tk.Tk):
+    """Корневое окно приложения. Сетевые операции выполняются в фоновых потоках,
+    а их события GUI-поток разбирает в _poll_events (Tk не потокобезопасен)."""
+
     def __init__(self, config: Config, store: Storage):
         super().__init__()
         self.config_obj = config
@@ -104,6 +107,7 @@ class MainWindow(tk.Tk):
         ttk.Label(self, textvariable=self.status, anchor="w", padding=(8, 4)).pack(fill="x")
 
     def refresh_table(self) -> None:
+        """Перерисовывает таблицу из БД; iid строки = topic_id."""
         self.tree.delete(*self.tree.get_children())
         for t in self.store.unread_topics():
             self.tree.insert(
@@ -125,6 +129,7 @@ class MainWindow(tk.Tk):
     # --- действия ---
 
     def start_check(self) -> None:
+        """Кнопка «Проверить»: запускает CheckWorker, если он ещё не работает."""
         if self.worker is not None and self.worker.is_alive():
             return
         if not self.config_obj.login or not self.config_obj.password:
@@ -137,6 +142,7 @@ class MainWindow(tk.Tk):
         self.worker.start()
 
     def confirm_selected(self) -> None:
+        """«Подтвердить»: выделенные темы — прочитаны и убираются из таблицы."""
         ids = self._selected_ids()
         if not ids:
             return
@@ -146,10 +152,12 @@ class MainWindow(tk.Tk):
         self.status.set(f"Отмечено прочитанными: {len(ids)}")
 
     def _open_in_browser(self, _event=None) -> None:
+        """Открывает выделенные темы в браузере (не больше 5 вкладок за раз)."""
         for tid in self._selected_ids()[:5]:
             webbrowser.open(f"https://pornolab.net/forum/viewtopic.php?t={tid}")
 
     def download_selected(self) -> None:
+        """«Скачать торрент»: скачивание выделенных тем в отдельном потоке."""
         ids = self._selected_ids()
         if not ids:
             return
@@ -198,6 +206,7 @@ class MainWindow(tk.Tk):
         return reply.get("code")
 
     def _poll_events(self) -> None:
+        """Каждые 150 мс разбирает события фоновых потоков (см. app/worker.py)."""
         try:
             while True:
                 event = self.events.get_nowait()

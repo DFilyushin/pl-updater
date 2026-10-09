@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS topics (
 
 
 class Storage:
+    """Обёртка над sqlite3. Соединение общее для GUI и фоновых потоков,
+    поэтому каждое обращение идёт под self._lock."""
+
     def __init__(self, path: Path | None = None):
         self.path = path or (base_dir() / "data.sqlite3")
         self._lock = threading.Lock()
@@ -75,6 +78,7 @@ class Storage:
     # --- запросы ---
 
     def add_query(self, text: str) -> int:
+        """Добавляет запрос (дубликат не создаётся) и возвращает его id."""
         text = text.strip()
         if not text:
             raise ValueError("Пустой запрос")
@@ -112,6 +116,7 @@ class Storage:
             self._conn.commit()
 
     def list_queries(self, enabled_only: bool = False) -> list[sqlite3.Row]:
+        """Запросы в порядке добавления; enabled_only — только включённые."""
         sql = "SELECT * FROM queries"
         if enabled_only:
             sql += " WHERE enabled = 1"
@@ -144,6 +149,7 @@ class Storage:
         return new_count
 
     def unread_topics(self) -> list[sqlite3.Row]:
+        """Непрочитанные темы для главной таблицы: по запросу, внутри — новые сверху."""
         with self._lock:
             return self._conn.execute(
                 "SELECT t.*, q.text AS query_text FROM topics t"
@@ -153,6 +159,7 @@ class Storage:
             ).fetchall()
 
     def mark_read(self, topic_ids: list[int]) -> None:
+        """Отмечает темы прочитанными: они навсегда пропадают из списка."""
         if not topic_ids:
             return
         with self._lock:

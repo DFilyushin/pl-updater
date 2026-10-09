@@ -9,6 +9,7 @@ BASE_URL = "https://pornolab.net/forum/"
 
 
 def base_dir() -> Path:
+    """Папка для данных: рядом с exe в сборке PyInstaller, иначе корень проекта."""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
     return Path(__file__).resolve().parent.parent
@@ -26,12 +27,15 @@ DEFAULTS = {
 
 
 class Config:
+    """Настройки из settings.json поверх DEFAULTS; ключи читаются как атрибуты (config.login)."""
+
     def __init__(self, path: Path | None = None):
         self.path = path or (base_dir() / "settings.json")
         self.data = dict(DEFAULTS)
         self.load()
 
     def load(self) -> None:
+        """Подгружает известные ключи из файла; битый или нечитаемый файл игнорируется."""
         if self.path.exists():
             try:
                 loaded = json.loads(self.path.read_text(encoding="utf-8"))
@@ -50,12 +54,14 @@ class Config:
         raise AttributeError(name)
 
     def set(self, name: str, value) -> None:
+        """Меняет значение в памяти (на диск — через save()); неизвестный ключ — KeyError."""
         if name not in DEFAULTS:
             raise KeyError(name)
         self.data[name] = value
 
     @property
     def proxies(self) -> dict:
+        """Словарь прокси в формате requests (пустой, если прокси не задан)."""
         if self.data["proxy"]:
             return {"http": self.data["proxy"], "https": self.data["proxy"]}
         return {}

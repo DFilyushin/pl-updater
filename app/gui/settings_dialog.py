@@ -8,6 +8,9 @@ from .utils import center_on_parent
 
 
 class SettingsDialog(tk.Toplevel):
+    """Модальное окно настроек. Список запросов пишется в БД сразу,
+    параметры — в settings.json только по кнопке «Сохранить»."""
+
     def __init__(self, parent: tk.Misc, config: Config, store: Storage):
         super().__init__(parent)
         self.withdraw()  # показать только после центрирования, без мигания
@@ -177,6 +180,7 @@ class SettingsDialog(tk.Toplevel):
             self.v_dir.set(chosen)
 
     def _save(self) -> None:
+        """Проверяет числовые поля (пауза не меньше 2 с) и записывает settings.json."""
         cfg = self.config_obj
         try:
             delay = max(2.0, float(self.v_delay.get().replace(",", ".")))
