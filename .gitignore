@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+settings.json
+data.sqlite3
+cookies.dat
+app.log
+debug/
